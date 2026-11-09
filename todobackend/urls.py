@@ -15,11 +15,25 @@ Including another URLconf
     2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
 from django.contrib import admin
-from django.urls import path,include
+from django.urls import include, path
+
+from Api.auth_views import CookieLoginView, CookieRefreshView, CookieRegisterView, csrf_token
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path('api/v1/',include('Api.urls')),
-    path('api/v1/auth/',include('dj_rest_auth.urls')),
-    path('api/v1/auth/registration/',include('dj_rest_auth.registration.urls')),
+    path('api/v1/auth/csrf/', csrf_token, name='auth_csrf'),
+    path('api/v1/auth/login/', CookieLoginView.as_view(), name='rest_login'),
+    path(
+        'api/v1/auth/registration/',
+        CookieRegisterView.as_view(),
+        name='rest_register',
+    ),
+    path(
+        'api/v1/auth/token/refresh/',
+        CookieRefreshView.as_view(),
+        name='token_refresh',
+    ),
+    path('api/v1/auth/', include('dj_rest_auth.urls')),
+    path('api/v1/auth/registration/', include('dj_rest_auth.registration.urls')),
+    path('api/v1/', include('Api.urls')),
 ]

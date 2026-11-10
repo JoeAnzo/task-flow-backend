@@ -105,8 +105,17 @@ WSGI_APPLICATION = 'todobackend.wsgi.application'
 USE_POSTGRES = os.environ.get('USE_POSTGRES', 'true').lower() == 'true'
 USE_POSTGRES_PROD = os.environ.get('USE_POSTGRES_PROD', 'true').lower() == 'true'
 
+DATABASE_URL = os.environ.get('DATABASE_URL')
 
-if USE_POSTGRES:
+if DATABASE_URL:
+    DATABASES = {
+        'default': dj_database_url.parse(
+            DATABASE_URL,
+            conn_max_age=600,
+            ssl_require=not DEBUG,
+        )
+    }
+elif USE_POSTGRES:
     DATABASES = {
         'default': {
             'ENGINE': 'django.db.backends.postgresql',
@@ -117,7 +126,6 @@ if USE_POSTGRES:
             'PORT': os.environ.get('DB_PORT', '5432'),
         }
     }
-
 
 else:
     DATABASES = {

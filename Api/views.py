@@ -67,3 +67,5 @@ def catch_all_views(request,resource=None):
         'status':404,
         'message':f'The route {request.path} does not exist on this server.'
     })
+
+

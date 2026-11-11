@@ -22,6 +22,7 @@ dependencies = [
     "redis>=8.1.0",
     "requests>=2.34.2",
     "whistle>=2.1.4",
+    "whitenoise>=6.12.0",
 ]
 
 [project.scripts]

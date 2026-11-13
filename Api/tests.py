@@ -1,13 +1,36 @@
 from datetime import timedelta
 
 from django.contrib.auth import get_user_model
-from django.test import TestCase
+from django.test import SimpleTestCase, TestCase
 from django.utils import timezone
 from rest_framework import status
 from rest_framework.reverse import reverse
 from rest_framework.test import APIClient
 
+from allauth.socialaccount.models import SocialAccount
+from allauth.socialaccount.providers.oauth2.client import OAuth2Error
+from todobackend.views import _google_oauth_error_detail
+
 from .models import Todo
+
+
+class GoogleOAuthErrorTests(SimpleTestCase):
+    def test_extracts_google_error_description(self):
+        response_body = b'{"error":"invalid_grant","error_description":"Bad Request"}'
+        error = OAuth2Error(f'Error retrieving access token: {response_body!r}')
+
+        self.assertEqual(
+            _google_oauth_error_detail(error),
+            'Bad Request (invalid_grant)',
+        )
+
+    def test_uses_safe_message_for_unrecognized_error_body(self):
+        error = OAuth2Error('unexpected OAuth response')
+
+        self.assertEqual(
+            _google_oauth_error_detail(error),
+            'Google OAuth token exchange failed.',
+        )
 
 
 class TodoApiTests(TestCase):
@@ -80,6 +103,26 @@ class AuthApiTests(TestCase):
             format='json',
             HTTP_X_CSRFTOKEN=csrf_token,
         )
+
+    def test_current_user_includes_google_display_name(self):
+        user = get_user_model().objects.create_user(
+            username='google-user',
+            email='google@example.com',
+            password='StrongPass123!',
+        )
+        SocialAccount.objects.create(
+            user=user,
+            provider='google',
+            uid='google-user-id',
+            extra_data={'name': 'Google Display Name'},
+        )
+        self.client.force_authenticate(user=user)
+
+        response = self.client.get('/api/v1/auth/user/')
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['google_display_name'], 'Google Display Name')
+        self.assertEqual(response.data['username'], 'google-user')
 
     def test_registration_sets_httponly_cookies_without_exposing_refresh_token(self):
         csrf = self.csrf_token()

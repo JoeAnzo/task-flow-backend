@@ -36,11 +36,10 @@ if RENDER_EXTERNAL_HOSTNAME:
 
 
 def env_list(name, default):
-    return [
-        value.strip()
-        for value in os.environ.get(name, default).split(',')
-        if value.strip()
-    ]
+    value = os.environ.get(name)
+    if value is None:
+        return default
+    return [item.strip() for item in value.split(',') if item.strip()]
 
 INSTALLED_APPS = [
     'django.contrib.admin',

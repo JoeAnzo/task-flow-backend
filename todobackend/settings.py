@@ -187,6 +187,10 @@ CSRF_TRUSTED_ORIGINS = env_list(
     ]
 )
 CSRF_COOKIE_SECURE = not DEBUG
+CSRF_COOKIE_SAMESITE = os.environ.get(
+    'CSRF_COOKIE_SAMESITE',
+    'Lax' if DEBUG else 'None',
+)
 
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': [

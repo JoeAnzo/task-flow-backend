@@ -12,7 +12,36 @@ class Todo(models.Model):
     completed = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+    reminder_task_id = models.CharField(max_length=255,null=True,blank=True)
+    missed_task_id = models.CharField(max_length=255,null=True,blank=True)
     due_at = models.DateTimeField()
 
     def __str__(self):
         return self.title
+
+class Nortification(models.Model):
+    TYPES = [
+        ("CREATED","Task Created"),
+        ("PENDING","Task Pending"),
+        ("MISSED","Task Missed"),
+        ("ACCOMPLISHED","Task Accomplished"),
+    ]
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="nortifications"
+    )
+    todo = models.ForeignKey(
+        "Todo",
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True
+    )
+    nortification_type = models.CharField(max_length=20,choices=TYPES)
+    message = models.CharField(max_length=255)
+    is_read = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["-created_at"]

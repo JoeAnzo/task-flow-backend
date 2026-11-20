@@ -9,3 +9,10 @@ wheels/
 # Virtual environments
 .venv
 .env
+.env.*
+!.env.example
+
+# Private keys and certificates
+private_key.pem
+*.pem
+*.key

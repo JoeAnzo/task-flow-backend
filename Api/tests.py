@@ -2,6 +2,7 @@ from datetime import timedelta
 
 from django.contrib.auth import get_user_model
 from django.test import SimpleTestCase, TestCase
+from django.test.utils import override_settings
 from django.utils import timezone
 from rest_framework import status
 from rest_framework.reverse import reverse
@@ -9,9 +10,10 @@ from rest_framework.test import APIClient
 
 from allauth.socialaccount.models import SocialAccount
 from allauth.socialaccount.providers.oauth2.client import OAuth2Error
+from webpush.models import PushInformation
 from todobackend.views import _google_oauth_error_detail
 
-from .models import Todo
+from .models import Nortification, Todo
 
 
 class GoogleOAuthErrorTests(SimpleTestCase):
@@ -80,6 +82,90 @@ class TodoApiTests(TestCase):
 
         response = self.client.get(reverse('detail_update_delete_todo', kwargs={'pk': other_todo.pk}))
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_list_nortifications_returns_only_current_user_items(self):
+        own_notification = Nortification.objects.create(
+            user=self.user,
+            todo=self.todo,
+            nortification_type='CREATED',
+            message='Your task was created.',
+        )
+        other_user = get_user_model().objects.create_user(
+            username='bob',
+            password='StrongPass123!',
+        )
+        Nortification.objects.create(
+            user=other_user,
+            nortification_type='CREATED',
+            message='Another user task was created.',
+        )
+
+        response = self.client.get(reverse('list_nortification'))
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual([item['id'] for item in response.data], [own_notification.id])
+
+    def test_user_cannot_mark_another_users_nortification_read(self):
+        other_user = get_user_model().objects.create_user(
+            username='bob',
+            password='StrongPass123!',
+        )
+        notification = Nortification.objects.create(
+            user=other_user,
+            nortification_type='CREATED',
+            message='Another user task was created.',
+        )
+
+        response = self.client.patch(
+            reverse('mark_nortification_read', kwargs={'pk': notification.pk}),
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
+    @override_settings(WEBPUSH_SETTINGS={'VAPID_PUBLIC_KEY': 'public-key-only'})
+    def test_push_public_key_endpoint_returns_only_public_key(self):
+        response = self.client.get(reverse('push_public_key'))
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data, {'publicKey': 'public-key-only'})
+
+    @override_settings(WEBPUSH_SETTINGS={})
+    def test_push_public_key_endpoint_reports_missing_configuration(self):
+        response = self.client.get(reverse('push_public_key'))
+
+        self.assertEqual(response.status_code, status.HTTP_503_SERVICE_UNAVAILABLE)
+
+    def test_authenticated_user_can_save_push_subscription(self):
+        response = self.client.post(
+            reverse('save_push_subscription'),
+            {
+                'subscription': {
+                    'endpoint': 'https://push.example.com/subscriptions/123',
+                    'keys': {
+                        'auth': 'auth-secret',
+                        'p256dh': 'public-key',
+                    },
+                },
+                'browser': 'test',
+                'user_agent': 'test-agent',
+            },
+            format='json',
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(
+            PushInformation.objects.filter(user=self.user).count(),
+            1,
+        )
+
+    def test_invalid_push_subscription_is_rejected(self):
+        response = self.client.post(
+            reverse('save_push_subscription'),
+            {'subscription': {}},
+            format='json',
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
 
 class AuthApiTests(TestCase):

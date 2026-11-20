@@ -246,12 +246,30 @@ SOCIALACCOUNT_PROVIDERS = {
         },
     }
 }
-
 SOCIALACCOUNT_EMAIL_AUTHENTICATION = True
 SOCIALACCOUNT_EMAIL_AUTHENTICATION_AUTO_CONNECT = True
 
 WEBPUSH_SETTINGS = {
-    "VAPID_PUBLIC_KEY": "Vapid Public Key",
-    "VAPID_PRIVATE_KEY":"Vapid Private Key",
+    "VAPID_PUBLIC_KEY":os.environ.get("VAPID_PUBLIC_KEY"),
+    "VAPID_PRIVATE_KEY":os.environ.get("VAPID_PRIVATE_KEY"),
     "VAPID_ADMIN_EMAIL": "joelanzovule@gmail.com"
 }
+
+CELERY_BROKER_URL = os.environ.get(
+    "CELERY_BROKER_URL",
+    "redis://127.0.0.1:6579/0"
+)
+CELERY_RESULT_BACKEND = os.environ.get("CELERY_RESULT_BACKEND", "redis://localhost:6379/0")
+CELERY_ACCEPT_CONTENT = ["json"]
+CELERY_TASK_SERIALIZER = "json"
+
+CELERY_TASK_IGNORE_RESULT = True
+
+EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
+EMAIL_HOST = "smtp.resend.com"
+EMAIL_PORT = 587
+EMAIL_USE_TLS = True
+EMAIL_HOST_USER = "resend"
+EMAIL_HOST_PASSWORD = os.environ["RESEND_API_KEY"]
+DEFAULT_FROM_EMAIL = os.environ["DEFAULT_FROM_EMAIL"]
+EMAIL_TIMEOUT = 10

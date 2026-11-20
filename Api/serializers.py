@@ -1,6 +1,6 @@
 from rest_framework import serializers
 
-from .models import Todo
+from .models import Todo,Nortification
 
 
 class TodoSerializer(serializers.ModelSerializer):
@@ -12,3 +12,16 @@ class TodoSerializer(serializers.ModelSerializer):
         model = Todo
         fields = ['id', 'user', 'title', 'completed', 'created_at', 'updated_at', 'due_at']
         read_only_fields = ['id', 'user', 'created_at', 'updated_at']
+
+class NortificationSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Nortification
+        fields = [
+            'id',
+            'todo',
+            'nortification_type',
+            'message',
+            'is_read',
+            'created_at'
+        ]
+        read_only_fields = fields

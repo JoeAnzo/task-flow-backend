@@ -15,6 +15,8 @@ class Todo(models.Model):
     reminder_task_id = models.CharField(max_length=255,null=True,blank=True)
     missed_task_id = models.CharField(max_length=255,null=True,blank=True)
     due_at = models.DateTimeField()
+    email_reminder_sent_at = models.DateTimeField(null=True, blank=True)
+    push_reminder_sent_at = models.DateTimeField(null=True, blank=True)
 
     def __str__(self):
         return self.title
@@ -25,6 +27,8 @@ class Nortification(models.Model):
         ("PENDING","Task Pending"),
         ("MISSED","Task Missed"),
         ("ACCOMPLISHED","Task Accomplished"),
+        ("UPDATED","Task Updated"),
+        ("DELETED","Task Deleted")
     ]
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL,

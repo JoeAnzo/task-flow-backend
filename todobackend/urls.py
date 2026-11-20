@@ -22,6 +22,7 @@ from Api.auth_views import CookieLoginView, CookieRefreshView, CookieRegisterVie
 
 urlpatterns = [
     path('admin/', admin.site.urls),
+    path('webpush/', include('webpush.urls')),
     path('api/v1/auth/csrf/', csrf_token, name='auth_csrf'),
     path('api/v1/auth/login/', CookieLoginView.as_view(), name='rest_login'),
     path(

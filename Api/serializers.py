@@ -25,3 +25,16 @@ class NortificationSerializer(serializers.ModelSerializer):
             'created_at'
         ]
         read_only_fields = fields
+
+
+class ChatRequestSerializer(serializers.Serializer):
+    message = serializers.CharField(
+        max_length=2000,
+        trim_whitespace=True,
+        allow_blank=False,
+    )
+    confirmation_token = serializers.CharField(
+        max_length=1000,
+        required=False,
+        allow_blank=False
+    )

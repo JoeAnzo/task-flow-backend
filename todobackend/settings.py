@@ -218,7 +218,6 @@ REST_AUTH = {
 
 ACCOUNT_LOGIN_METHODS = {'username', 'email'}
 ACCOUNT_SIGNUP_FIELDS = ['email*', 'username*', 'password1*', 'password2*']
-ACCOUNT_EMAIL_VERIFICATION = 'optional'
 
 SIMPLE_JWT = {
     'ACCESS_TOKEN_LIFETIME': timedelta(minutes=15),
@@ -273,3 +272,12 @@ EMAIL_HOST_USER = "resend"
 EMAIL_HOST_PASSWORD = os.environ["RESEND_API_KEY"]
 DEFAULT_FROM_EMAIL = os.environ["DEFAULT_FROM_EMAIL"]
 EMAIL_TIMEOUT = 10
+ACCOUNT_EMAIL_VERIFICATION = "mandatory"
+ACCOUNT_ADAPTER = "Api.adapters.AccountAdapter"
+FRONTEND_BASE_URL = os.environ.get(
+    "FRONTEND_BASE_URL",
+    "http://localhost:5173" if DEBUG else "https://task-flow-client.vercel.app",
+)
+GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY")
+GEMINI_MODEL = os.environ.get("GEMINI_MODEL")
+CHAT_TIME_ZONE = os.environ.get("CHAT_TIME_ZONE", "Africa/Nairobi")

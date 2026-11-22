@@ -11,5 +11,6 @@ urlpatterns = [
     views.mark_nortification_read,
     name='mark_nortification_read'
     ),
+    path('chat/',views.chat_with_ai,name='chat_with_ai'),
     re_path(r'^(?P<resource>.*)$', views.catch_all_views, name='catch_all_views'),
 ]

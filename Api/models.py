@@ -17,6 +17,8 @@ class Todo(models.Model):
     due_at = models.DateTimeField()
     email_reminder_sent_at = models.DateTimeField(null=True, blank=True)
     push_reminder_sent_at = models.DateTimeField(null=True, blank=True)
+    missed_email_reminder_sent_at = models.DateTimeField(null=True, blank=True)
+    missed_push_reminder_sent_at = models.DateTimeField(null=True, blank=True)
 
     def __str__(self):
         return self.title

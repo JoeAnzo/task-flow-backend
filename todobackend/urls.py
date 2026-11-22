@@ -16,11 +16,13 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import include, path
-from .views import GoogleLogin
+from .views import GoogleLogin, health_check
 
 from Api.auth_views import CookieLoginView, CookieRefreshView, CookieRegisterView, csrf_token
 
 urlpatterns = [
+    path('health', health_check, name='health_check'),
+    path('health/', health_check),
     path('admin/', admin.site.urls),
     path('webpush/', include('webpush.urls')),
     path('api/v1/auth/csrf/', csrf_token, name='auth_csrf'),

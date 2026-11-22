@@ -19,6 +19,7 @@ from todobackend.views import _google_oauth_error_detail
 from .adapters import AccountAdapter
 from .chat_ai import TodoIntent
 from .models import Nortification, Todo
+from .reminders import schedule_todo_reminder
 
 
 class GoogleOAuthErrorTests(SimpleTestCase):
@@ -53,6 +54,67 @@ class TodoApiTests(TestCase):
             title='Buy groceries',
             due_at=timezone.now() + timedelta(days=1),
         )
+
+    @patch('Api.reminders.send_missed_todo_reminder.apply_async')
+    @patch('Api.reminders.send_todo_reminder.apply_async')
+    def test_reminder_for_todo_due_within_five_minutes_is_scheduled_at_due_time(
+        self,
+        schedule_reminder,
+        schedule_missed_reminder,
+    ):
+        due_at = timezone.now() + timedelta(minutes=2)
+        self.todo.due_at = due_at
+        self.todo.save(update_fields=['due_at'])
+
+        schedule_todo_reminder(self.todo.pk)
+
+        reminder_options = schedule_reminder.call_args.kwargs
+        self.assertEqual(reminder_options['eta'], due_at)
+        self.assertEqual(reminder_options['args'], [self.todo.pk, True])
+        schedule_missed_reminder.assert_called_once()
+
+    @patch('Api.reminders.send_missed_todo_reminder.apply_async')
+    @patch('Api.reminders.send_todo_reminder.apply_async')
+    def test_reminder_for_todo_due_after_five_minutes_keeps_early_schedule(
+        self,
+        schedule_reminder,
+        schedule_missed_reminder,
+    ):
+        due_at = timezone.now() + timedelta(minutes=10)
+        self.todo.due_at = due_at
+        self.todo.save(update_fields=['due_at'])
+
+        schedule_todo_reminder(self.todo.pk)
+
+        reminder_options = schedule_reminder.call_args.kwargs
+        self.assertEqual(reminder_options['eta'], due_at - timedelta(minutes=5))
+        self.assertEqual(reminder_options['args'], [self.todo.pk, False])
+        schedule_missed_reminder.assert_called_once()
+
+    @patch('Api.views.interpret_message')
+    def test_chat_greeting_responds_without_calling_ai(self, interpret_message):
+        response = self.client.post(
+            reverse('chat_with_ai'),
+            {'message': 'How are you?'},
+            format='json',
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertIn('ready to help you organize your tasks', response.data['reply'])
+        interpret_message.assert_not_called()
+
+    @patch('Api.views.interpret_message')
+    def test_chat_task_request_still_uses_ai(self, interpret_message):
+        interpret_message.return_value = TodoIntent(intent='unknown')
+
+        response = self.client.post(
+            reverse('chat_with_ai'),
+            {'message': 'Please help me make a task list for this weekend'},
+            format='json',
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        interpret_message.assert_called_once()
 
     @patch('Api.views.interpret_message')
     def test_chat_create_todo_executes_intent(self, interpret_message):

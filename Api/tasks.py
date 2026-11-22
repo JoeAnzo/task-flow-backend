@@ -13,21 +13,32 @@ from . models import Nortification, Todo
 logger = logging.getLogger(__name__)
 
 @shared_task(bind=True)
-def send_todo_reminder(self,todo_id):
+def send_todo_reminder(self, todo_id, at_due_time=False):
     try:
         todo = Todo.objects.select_related("user").get(pk=todo_id)
     except Todo.DoesNotExist:
         return
 
-    if (todo.reminder_task_id != self.request.id or todo.completed or todo.due_at <= timezone.now()):
+    if todo.reminder_task_id != self.request.id or todo.completed:
         return
+
+    if at_due_time:
+        if timezone.now() < todo.due_at:
+            return
+        timing_message = "is due now."
+        subject = f"Due now: {todo.title}"
+    else:
+        if todo.due_at <= timezone.now():
+            return
+        timing_message = "is due in about 5 minutes."
+        subject = f"Reminder: {todo.title} is due soon"
 
     if not todo.push_reminder_sent_at:
         send_user_notification(
             user=todo.user,
             payload={
-                "head":"Todo due soon",
-                "body":f"'{todo.title}' is due in about 5 minutes.",
+                "head": "Todo due now" if at_due_time else "Todo due soon",
+                "body": f"'{todo.title}' {timing_message}",
                 "url":"/",
             },
             ttl=3600,
@@ -37,8 +48,8 @@ def send_todo_reminder(self,todo_id):
 
     if todo.user.email and not todo.email_reminder_sent_at:
         send_mail(
-            subject=f"Reminder: {todo.title} is due soon",
-            message=f'Your todo "{todo.title}" is due in about 5 minutes.',
+            subject=subject,
+            message=f'Your todo "{todo.title}" {timing_message}',
             from_email=settings.DEFAULT_FROM_EMAIL,
             recipient_list=[todo.user.email],
             fail_silently=False,

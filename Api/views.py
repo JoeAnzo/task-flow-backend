@@ -1,3 +1,5 @@
+import re
+
 from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
@@ -24,6 +26,38 @@ from .chat_ai import interpret_message
 from .serializers import ChatRequestSerializer
 
 CONFIRMATION_SALT = 'todo-ai-chat-delete'
+
+SMALL_TALK_REPLIES = (
+    (
+        re.compile(r'^(?:hi|hello|hey)(?: there)?(?: how are you)?$'),
+        "Hi! I'm here to help you stay on top of your tasks. What would you like to add, update, or plan?",
+    ),
+    (
+        re.compile(r'^(?:good morning|good afternoon|good evening|good night)$'),
+        "Hello! Hope your day is going well. Want to plan your tasks or check what's coming up?",
+    ),
+    (
+        re.compile(r"^(?:how are you|how's it going|how are things|are you doing well)\??$"),
+        "I'm doing well, thanks for asking! I'm ready to help you organize your tasks. What would you like to work on?",
+    ),
+    (
+        re.compile(r'^(?:thanks|thank you|thanks a lot|thank you so much)$'),
+        "You're welcome! Let me know if you'd like help with another task.",
+    ),
+    (
+        re.compile(r'^(?:who are you|what can you do|how can you help(?: me)?)$'),
+        "I'm your task assistant. I can help create, list, update, complete, and delete todos, and help you plan your schedule.",
+    ),
+)
+
+
+def _small_talk_reply(message):
+    normalized = re.sub(r'\s+', ' ', message.lower().strip())
+    normalized = re.sub(r'[.!?]+$', '', normalized)
+    for pattern, reply in SMALL_TALK_REPLIES:
+        if pattern.fullmatch(normalized):
+            return reply
+    return None
 
 
 def _parse_due_at(value):
@@ -200,6 +234,17 @@ def chat_with_ai(request):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     message = serializer.validated_data['message']
+
+    if not request.data.get('confirmation_token'):
+        small_talk_reply = _small_talk_reply(message)
+        if small_talk_reply:
+            return Response(
+                {
+                    'intent': {'intent': 'unknown'},
+                    'reply': small_talk_reply,
+                },
+                status=status.HTTP_200_OK,
+            )
 
     try:
         intent = interpret_message(message)
@@ -392,5 +437,4 @@ def catch_all_views(request,resource=None):
         'status':404,
         'message':f'The route {request.path} does not exist on this server.'
     })
-
 

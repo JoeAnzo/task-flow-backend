@@ -9,6 +9,7 @@ from .tasks import send_missed_todo_reminder, send_todo_reminder
 
 def schedule_todo_reminder(todo_id):
     todo = Todo.objects.get(pk=todo_id)
+    now = timezone.now()
 
     if todo.reminder_task_id:
         current_app.control.revoke(todo.reminder_task_id, terminate=False)
@@ -29,16 +30,22 @@ def schedule_todo_reminder(todo_id):
     todo.missed_task_id = missed_task_id
     todo.save(update_fields=["reminder_task_id", "missed_task_id"])
 
-    reminder_time = todo.due_at - timedelta(minutes=5)
+    reminder_at_due_time = timedelta(0) < todo.due_at - now <= timedelta(minutes=5)
+    reminder_time = (
+        todo.due_at
+        if reminder_at_due_time
+        else todo.due_at - timedelta(minutes=5)
+    )
     missed_time = todo.due_at + timedelta(minutes=5)
 
-    send_todo_reminder.apply_async(
-        args=[todo.pk],
-        eta=max(reminder_time, timezone.now()),
-        task_id=reminder_task_id,
-    )
+    if todo.due_at > now:
+        send_todo_reminder.apply_async(
+            args=[todo.pk, reminder_at_due_time],
+            eta=reminder_time,
+            task_id=reminder_task_id,
+        )
     send_missed_todo_reminder.apply_async(
         args=[todo.pk],
-        eta=max(missed_time, timezone.now()),
+        eta=max(missed_time, now),
         task_id=missed_task_id,
     )
